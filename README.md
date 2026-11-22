@@ -103,15 +103,7 @@ ros2 topic pub /mission/start std_msgs/msg/Bool '{data: true}' --once
 
 ## 外部私有目录
 
-默认使用 `${XDG_CACHE_HOME:-$HOME/.cache}/aeromind-sim/`。该目录保存本机生成的数据，不随源码发布：
-
-- `build/`、`install/`、`logs/`：ROS 构建和运行缓存；
-- `dependencies/`：ArduPilot 等外部依赖；
-- `maps/`：`arena.npz` 和 `.pcd` 地图；
-- `artifacts/`：回归日志和验证结果；
-- `releases/`：发布源码包。
-
-需要改变位置时，在构建和运行前设置同一个绝对路径：
+构建缓存、ArduPilot 依赖、地图、回归结果和发布包默认写入 `${XDG_CACHE_HOME:-$HOME/.cache}/aeromind-sim/`，不随源码发布。需要改变位置时，在构建和运行前设置同一绝对路径，该路径不能位于仓库内；源码移动后重新设置并执行 `make build`：
 
 ```bash
 export COMPETITION_LOCAL_DIR=/srv/aeromind-sim-private
@@ -119,9 +111,7 @@ make build
 ./start.sh --check
 ```
 
-该路径不能位于源码仓库内。源码移动后，重新设置路径并执行 `make build`。不要把私有目录、地图、日志、`build/`、`install/`、SITL 二进制或本机配置提交到 Git。
-
-Makefile 还支持 `SITL_WORKDIR`、`ARDUCOPTER_BIN`、`ROS_DISTRO`、`PYTHON`、`SMOKE_TIMEOUT`、`SMOKE_VISUAL`、`SMOKE_ARGS` 和 `RUN_ARGS`。默认值和使用示例见[运行手册](docs/运行手册.md)；其中 `RUN_ARGS` 只用于向 `start.sh` 传递启动参数，`SMOKE_ARGS` 只用于回归脚本。
+目录布局、Makefile 变量（`SITL_WORKDIR`、`ARDUCOPTER_BIN`、`ROS_DISTRO`、`PYTHON`、`BUILD_JOBS`、`SMOKE_*`、`RUN_ARGS`）和示例见[运行手册](docs/运行手册.md)。
 
 ## 点云、航线和地面站
 
@@ -157,17 +147,7 @@ GitHub Actions 的 `Fresh Ubuntu / Install and run downloaded source` 作业从�
 
 ## 发布和隐私检查
 
-发布前只暂存 Git 仓库中的源码和公开资源：
-
-```bash
-git add -A
-git diff --cached --stat
-python3 tools/check_open_source_hygiene.py --staged
-make check
-make release
-```
-
-`make release` 会在私有目录的 `releases/aeromind-sim-source.zip` 生成不含 Git 元数据的源码包。不要直接压缩整个工作目录。发布前还应检查 staged diff 中没有用户名、绝对路径、内网地址、令牌、SSH 密钥、地图、日志或本机生成文件。
+提交前运行 `make check` 和 `python3 tools/check_open_source_hygiene.py --staged`，前者覆盖风格与测试，后者检查 staged 内容是否带出本机路径、凭据或生成文件。打包与发布流程见 [开发说明](docs/development.md)。
 
 ## 许可证
 
