@@ -1,6 +1,8 @@
 # AeroMind Sim
 
-AeroMind Sim 是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协同仿真工程。它提供室内无 GPS 的点云建图与定位、预设航线、相机识别、无人车路线，以及可选的 MAVLink 地面站连接。
+AeroMind Sim（无人机空地协同项目）是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协同仿真工程。它提供室内无 GPS 的点云建图与定位、预设航线、相机识别、无人车路线，以及可选的 MAVLink 地面站连接。
+
+本项目用于无人机竞赛的空地协同任务验证，仓库发布的是仿真代码：全部飞行、感知与协同逻辑都在 Gazebo 与 SITL 中运行，不包含实机飞控参数、现场配置或队伍内部资料。
 
 仓库只包含源码、测试、场景资源和安装脚本。构建产物、地图、日志、SITL 依赖和截图统一写入仓库外的私有目录，避免把本机路径、运行数据或凭据带入 Git。
 
@@ -23,8 +25,8 @@ AeroMind Sim 是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协�
 ## 快速开始
 
 ```bash
-git clone https://github.com/wang3537248429/aeromind-sim.git
-cd aeromind-sim
+git clone https://github.com/wang3537248429/uav-ugv-cooperation-sim.git
+cd uav-ugv-cooperation-sim
 bash tools/setup_ubuntu_22_04.sh
 ./start.sh --check
 ```
