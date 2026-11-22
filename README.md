@@ -1,6 +1,6 @@
-# AeroMind Sim
+# 无人机空地协同项目
 
-AeroMind Sim（无人机空地协同项目）是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协同仿真工程。它提供室内无 GPS 的点云建图与定位、预设航线、相机识别、无人车路线，以及可选的 MAVLink 地面站连接。
+本项目是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协同仿真工程。它提供室内无 GPS 的点云建图与定位、预设航线、相机识别、无人车路线，以及可选的 MAVLink 地面站连接。
 
 本项目用于无人机竞赛的空地协同任务验证，仓库发布的是仿真代码：全部飞行、感知与协同逻辑都在 Gazebo 与 SITL 中运行，不包含实机飞控参数、现场配置或队伍内部资料。
 
