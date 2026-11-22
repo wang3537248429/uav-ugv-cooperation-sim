@@ -1,0 +1,7 @@
+-r requirements.txt
+empy==3.3.4
+future==0.18.2
+lxml==4.8.0
+pexpect==4.8.0
+ptyprocess==0.7.0
+pyserial==3.5

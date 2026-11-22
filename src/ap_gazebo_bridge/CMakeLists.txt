@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.16)
+project(ap_gazebo_bridge)
+
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(ros_gz_interfaces REQUIRED)
+find_package(gz-transport12 REQUIRED)
+find_package(gz-msgs9 REQUIRED)
+
+add_executable(scene_service_bridge src/scene_service_bridge.cpp)
+target_compile_features(scene_service_bridge PRIVATE cxx_std_17)
+target_compile_options(scene_service_bridge PRIVATE -Wall -Wextra -Wpedantic)
+ament_target_dependencies(scene_service_bridge rclcpp ros_gz_interfaces)
+target_link_libraries(scene_service_bridge gz-transport12::core gz-msgs9::core)
+install(TARGETS scene_service_bridge DESTINATION lib/${PROJECT_NAME})
+ament_package()

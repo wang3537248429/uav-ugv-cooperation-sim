@@ -1,0 +1,48 @@
+pointcloud_navigation:
+  ros__parameters:
+    # Canonical PointCloud2 endpoint. The Gazebo Mid-360 approximation is
+    # bridged here; livox_ros_driver2 deployments should convert
+    # /livox/lidar (CustomMsg) to this topic and keep the estimator unchanged.
+    cloud_topic: /navigation/lidar/points
+    sensor_frame: drone/base_link/navigation_lidar
+    # Livox Mid-360 top-centre mounting assumption: sensor -> body FLU,
+    # metres and radians. Replace with the measured bracket calibration in
+    # navigation.local.yaml before using a real aircraft.
+    sensor_xyz_rpy: [0.0, 0.0, 0.15, 0.0, 0.0, 0.0]
+    map_frame: uav_map
+    # Approximate start in the saved map, xyz + roll/pitch/yaw (radians).
+    # Mapping uses this as the chosen map origin, not a measured global pose.
+    initial_pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    # Mid-360 produces a dense non-repetitive cloud. A 6 cm voxel keeps
+    # enough returns for the small indoor room while keeping ICP stable.
+    voxel_size: 0.06
+    min_range: 0.35
+    max_range: 12.0
+    max_distance: 0.50
+    max_rmse: 0.080
+    min_fitness: 0.45
+    # A 10 Hz scan should move only a few centimetres at the validated flight
+    # speed. Reject a single ICP solution that jumps farther than 20 cm;
+    # keeping the last pose is safer than feeding a stale/outlier pose to EKF.
+    # Horizontal flight can cover several decimetres between Python ICP
+    # callbacks; keep that bound separate from the much slower vertical
+    # takeoff/landing motion where parallel planes can create false matches.
+    max_translation: 0.55
+    # The first accepted frame can arrive after a slow takeoff has moved
+    # several decimetres; mapper.max_vertical_step still limits the emitted
+    # per-frame innovation, while this bound prevents a false rejection of
+    # that absolute ICP solution.
+    max_vertical_translation: 0.80
+    max_vertical_step: 0.20
+    # Arena-specific prior: the fixed wall tops have a common height.
+    # Their observed upper envelope seeds Z when the narrow lower FOV sees
+    # too little floor. Set to 0.0 for scenes without this geometry.
+    upper_structure_quantile: 0.995
+    # Damp the point-to-point z residual used to recover observability over
+    # the parallel floor/ceiling. Large residuals are rejected as ambiguous.
+    z_correction_gain: 0.85
+    z_correction_limit: 0.50
+    max_rotation: 0.50
+    max_scan_points: 2400
+    stale_timeout: 1.2
+    autosave_period: 15.0

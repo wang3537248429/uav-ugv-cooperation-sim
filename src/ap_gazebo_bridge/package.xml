@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>ap_gazebo_bridge</name>
+  <version>1.0.0</version>
+  <description>Persistent Gazebo Garden scene services for ROS 2 Humble.</description>
+  <maintainer email="contributors@aeromind-sim.invalid">AeroMind Sim contributors</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>ros_gz_interfaces</depend>
+  <depend>gz-transport12</depend>
+  <depend>gz-msgs9</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

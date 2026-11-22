@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sdf version="1.9">
+  <model name="competition_x500">
+    <!--
+      PX4 x500_base is vendored unchanged under model://x500_base.
+      Its 492.15 mm motor-axis diagonal is scaled by 0.67 to 329.74 mm.
+      The include pose overrides the upstream 0.24 m spawn pose so that the
+      competition world remains the single authority for vehicle placement.
+    -->
+    <include merge="true">
+      <uri>model://x500_base</uri>
+      <pose>0 0 0 0 0 0</pose>
+      <scale>0.67 0.67 0.67</scale>
+    </include>
+
+    <!--
+      Competition-only guards and balloon needle stay outside PX4 files.
+      The generator merges these visuals into base_link and removes this
+      placeholder body/joint so they add no unstable lightweight rigid body.
+    -->
+    <link name="competition_payload">
+      <pose relative_to="base_link">0 0 0 0 0 0</pose>
+      <!--
+        Livox Mid-360 approximation for mapping/localization. Gazebo's
+        gpu_lidar uses a regular raster, while a real Mid-360 uses a
+        non-repetitive scan pattern. The important physical contract is kept
+        here: 360 deg horizontal FOV, -7..52 deg vertical FOV, 10 Hz, about
+        200k points/s and a 40 m nominal range. The ROS adapter below still
+        exposes a sensor_msgs/PointCloud2 stream so the estimator can be
+        tested with either Gazebo or livox_ros_driver2 data.
+      -->
+      <sensor name="navigation_lidar" type="gpu_lidar">
+        <!-- top-centre mount; measure the real bracket and override the
+             sensor_xyz_rpy values in navigation.local.yaml when necessary -->
+        <!-- Competition payload links are merged after the upstream model is
+             scaled, so this pose is already in final metres. Keep it equal
+             to navigation.yaml's calibrated 0.15 m body offset. -->
+        <pose>0 0 0.15 0 0 0</pose>
+        <topic>/navigation/lidar</topic>
+        <update_rate>10</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <lidar>
+          <scan>
+            <horizontal>
+              <!-- The real Mid-360 is non-repetitive. Gazebo uses a stable
+                   600 x 32 raster (~192k rays/s) as a deterministic sample
+                   of that stream; ICP downsamples it before matching. -->
+              <samples>600</samples><resolution>1</resolution>
+              <min_angle>-3.14159265</min_angle><max_angle>3.14159265</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>32</samples><resolution>1</resolution>
+              <min_angle>-0.12217305</min_angle><max_angle>0.90757121</max_angle>
+            </vertical>
+          </scan>
+          <range><min>0.10</min><max>40</max><resolution>0.01</resolution></range>
+          <!-- Keep the simulated return noise at 5 mm. Mid-360's published
+               accuracy is about 2 cm; the remaining uncertainty is handled
+               by voxel filtering and the ICP covariance model. -->
+          <noise><type>gaussian</type><mean>0</mean><stddev>0.005</stddev></noise>
+        </lidar>
+      </sensor>
+      <inertial>
+        <mass>0.001</mass>
+        <inertia>
+          <ixx>1e-6</ixx>
+          <iyy>1e-6</iyy>
+          <izz>1e-6</izz>
+        </inertia>
+      </inertial>
+
+      <visual name="competition_needle_mount">
+        <pose>0.12 0 -0.055 0 1.5707963268 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.012</radius>
+            <length>0.08</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.05 0.05 0.05 1</ambient>
+          <diffuse>0.08 0.08 0.08 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+      <visual name="competition_balloon_needle">
+        <pose>0.245 0 -0.07 0 1.5707963268 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0015</radius>
+            <length>0.165</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.75 0.75 0.72 1</ambient>
+          <diffuse>0.9 0.9 0.86 1</diffuse>
+          <specular>0.8 0.8 0.8 1</specular>
+        </material>
+      </visual>
+      <visual name="competition_balloon_needle_tip">
+        <pose>0.335 0 -0.07 0 1.5707963268 0</pose>
+        <geometry>
+          <cylinder>
+            <radius>0.0015</radius>
+            <length>0.015</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.9 0.9 0.86 1</ambient>
+          <diffuse>1 1 0.92 1</diffuse>
+          <specular>0.9 0.9 0.9 1</specular>
+        </material>
+      </visual>
+
+      <visual name="prop_guard_0">
+        <pose>0.11658 -0.11658 0.045 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.048</radius><length>0.003</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>1 0.9 0.1 0.22</ambient>
+          <diffuse>1 0.9 0.1 0.22</diffuse>
+        </material>
+      </visual>
+      <visual name="prop_guard_1">
+        <pose>-0.11658 0.11658 0.045 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.048</radius><length>0.003</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>1 0.9 0.1 0.22</ambient>
+          <diffuse>1 0.9 0.1 0.22</diffuse>
+        </material>
+      </visual>
+      <visual name="prop_guard_2">
+        <pose>0.11658 0.11658 0.045 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.048</radius><length>0.003</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>1 0.9 0.1 0.22</ambient>
+          <diffuse>1 0.9 0.1 0.22</diffuse>
+        </material>
+      </visual>
+      <visual name="prop_guard_3">
+        <pose>-0.11658 -0.11658 0.045 0 0 0</pose>
+        <geometry>
+          <cylinder><radius>0.048</radius><length>0.003</length></cylinder>
+        </geometry>
+        <material>
+          <ambient>1 0.9 0.1 0.22</ambient>
+          <diffuse>1 0.9 0.1 0.22</diffuse>
+        </material>
+      </visual>
+    </link>
+    <joint name="competition_payload_joint" type="fixed">
+      <parent>base_link</parent>
+      <child>competition_payload</child>
+    </joint>
+
+    <plugin filename="gz-sim-joint-state-publisher-system"
+            name="gz::sim::systems::JointStatePublisher">
+      <joint_name>rotor_0_joint</joint_name>
+      <joint_name>rotor_1_joint</joint_name>
+      <joint_name>rotor_2_joint</joint_name>
+      <joint_name>rotor_3_joint</joint_name>
+    </plugin>
+
+    <!-- Dedicated physics feed: do not use the GUI scene stream (about 60Hz). -->
+    <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+      <publish_model_pose>true</publish_model_pose>
+      <publish_link_pose>false</publish_link_pose>
+      <publish_sensor_pose>false</publish_sensor_pose>
+      <publish_collision_pose>false</publish_collision_pose>
+      <publish_visual_pose>false</publish_visual_pose>
+      <!-- Garden also requires this flag for the containing model pose. -->
+      <publish_nested_model_pose>true</publish_nested_model_pose>
+      <use_pose_vector_msg>true</use_pose_vector_msg>
+      <update_frequency>200</update_frequency>
+    </plugin>
+
+    <!--
+      The official PX4 motor positions and rotation labels are retained.
+      The thrust constant is calibrated for the scaled derivative and the
+      bridge's 1500 us hover output; flight remains fully driven by ArduPilot
+      PWM through an explicit model namespace.
+    -->
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_0_joint</jointName>
+      <linkName>rotor_0</linkName>
+      <turningDirection>ccw</turningDirection>
+      <robotNamespace>drone</robotNamespace>
+      <actuator_number>0</actuator_number>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorType>velocity</motorType>
+      <maxRotVelocity>1000</maxRotVelocity>
+      <motorConstant>7.84532e-06</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+      <motorSpeedPubTopic>motor_speed/0</motorSpeedPubTopic>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_1_joint</jointName>
+      <linkName>rotor_1</linkName>
+      <turningDirection>ccw</turningDirection>
+      <robotNamespace>drone</robotNamespace>
+      <actuator_number>1</actuator_number>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorType>velocity</motorType>
+      <maxRotVelocity>1000</maxRotVelocity>
+      <motorConstant>7.84532e-06</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+      <motorSpeedPubTopic>motor_speed/1</motorSpeedPubTopic>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_2_joint</jointName>
+      <linkName>rotor_2</linkName>
+      <turningDirection>cw</turningDirection>
+      <robotNamespace>drone</robotNamespace>
+      <actuator_number>2</actuator_number>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorType>velocity</motorType>
+      <maxRotVelocity>1000</maxRotVelocity>
+      <motorConstant>7.84532e-06</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+      <motorSpeedPubTopic>motor_speed/2</motorSpeedPubTopic>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+    </plugin>
+    <plugin filename="gz-sim-multicopter-motor-model-system"
+            name="gz::sim::systems::MulticopterMotorModel">
+      <jointName>rotor_3_joint</jointName>
+      <linkName>rotor_3</linkName>
+      <turningDirection>cw</turningDirection>
+      <robotNamespace>drone</robotNamespace>
+      <actuator_number>3</actuator_number>
+      <commandSubTopic>command/motor_speed</commandSubTopic>
+      <motorType>velocity</motorType>
+      <maxRotVelocity>1000</maxRotVelocity>
+      <motorConstant>7.84532e-06</motorConstant>
+      <momentConstant>0.016</momentConstant>
+      <timeConstantUp>0.0125</timeConstantUp>
+      <timeConstantDown>0.025</timeConstantDown>
+      <rotorDragCoefficient>8.06428e-05</rotorDragCoefficient>
+      <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+      <motorSpeedPubTopic>motor_speed/3</motorSpeedPubTopic>
+      <rotorVelocitySlowdownSim>10</rotorVelocitySlowdownSim>
+    </plugin>
+  </model>
+</sdf>

@@ -1,0 +1,42 @@
+# Shared point-cloud/truth flight profile; optical flow retains sim_params.
+uav_mission_state_machine:
+  ros__parameters:
+    guided_path_lookahead: 0.65
+    # The registration callback runs below the sensor's 10 Hz publication
+    # rate on a CPU-only test host. Keep horizontal motion inside one ICP
+    # capture interval and use the scalar altitude controller; the generic
+    # 3-D lookahead controller otherwise injects alternating climb commands
+    # from the delayed z estimate.
+    # Position targets let ArduPilot's WPNAV loop perform the final approach
+    # and arrival settle; the conservative WPNAV limits below prevent a stale
+    # Mid-360 frame from becoming a high-rate velocity command.
+    guided_nav_control_mode: "position"
+    guided_nav_speed_max: 0.16
+    guided_nav_z_speed_max: 0.04
+    guided_3d_enabled: false
+    guided_nav_k_xy: 0.80
+    guided_nav_cross_track_d: 0.45
+    guided_velocity_slew_xy: 0.25
+    guided_velocity_brake_speed_xy: 0.45
+    guided_velocity_resume_speed_xy: 0.12
+    guided_velocity_brake_cmd_max: 0.20
+    guided_position_brake_speed_xy: 0.24
+    guided_position_brake_resume_speed_xy: 0.12
+    external_nav_stale_timeout: 1.5
+ap_mavlink_bridge:
+  ros__parameters:
+    external_nav_baro_z_fusion: false
+    external_nav_baro_z_max_age: 0.8
+    # Keep the native takeoff/position loop at the proven conservative
+    # acceleration. The cruise setpoint above is faster after HOVER_STABLE;
+    # raising WPNAV here makes the 1 m takeoff overshoot and destabilizes EKF.
+    ap_loit_speed_cms: 35.0
+    ap_loit_acc_max_cmss: 25.0
+    ap_wpnav_speed_cms: 22.0
+    ap_wpnav_accel_cmss: 15.0
+    # Keep native takeoff inside the Mid-360 observable band while retaining
+    # enough thrust authority to lift off reliably.  The mapper limits each
+    # accepted vertical innovation, so a delayed scan cannot create a jump.
+    ap_wpnav_speed_up_cms: 15.0
+    ap_wpnav_accel_z_cmss: 25.0
+    ap_mot_thst_hover: 0.50

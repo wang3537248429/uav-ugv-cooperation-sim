@@ -1,0 +1,652 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="competition_arena">
+
+    <!-- ==================== 物理与渲染 ==================== -->
+    <gravity>0 0 -9.8</gravity>
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+      <!-- 1 ms * 1000 Hz = 1x wall-clock time; without this cap, the
+           headless server can outrun the 200 Hz ArduPilot JSON backend. -->
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+            name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+            name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+            name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="gz-sim-sensors-system"
+            name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+            name="gz::sim::systems::Imu">
+    </plugin>
+    <scene>
+      <ambient>0.5 0.5 0.5 1.0</ambient>
+      <background>0.7 0.8 0.9 1.0</background>
+      <shadows>true</shadows>
+    </scene>
+    <light name="arena_sun" type="directional">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 12 0 0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>100</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.3 0.1 -0.9</direction>
+    </light>
+
+    <!-- ==================== 地面 ==================== -->
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="ground_collision">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>10 8</size></plane>
+          </geometry>
+          <surface>
+            <friction><ode><mu>1.0</mu><mu2>1.0</mu2></ode></friction>
+          </surface>
+        </collision>
+        <visual name="ground_visual">
+          <geometry>
+            <plane><normal>0 0 1</normal><size>10 8</size></plane>
+          </geometry>
+          <material>
+            <ambient>0.35 0.38 0.35 1</ambient>
+            <diffuse>0.55 0.58 0.55 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 起飞/起始区 (高亮绿色 + 白色边框) ==================== -->
+    <model name="start_zone">
+      <static>true</static>
+      <pose>-2.25 0 0.004 0 0 0</pose>
+      <link name="link">
+        <!-- 主区域 亮绿色 -->
+        <visual name="start_zone_visual">
+          <geometry><box><size>1.5 5.0 0.008</size></box></geometry>
+          <material>
+            <ambient>0.1 0.8 0.1 1</ambient>
+            <diffuse>0.2 1.0 0.2 1</diffuse>
+          </material>
+        </visual>
+        <!-- 白色边框 - 北边 -->
+        <visual name="border_n">
+          <pose>0 2.5 0.001 0 0 0</pose>
+          <geometry><box><size>1.5 0.04 0.01</size></box></geometry>
+          <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
+        </visual>
+        <!-- 白色边框 - 南边 -->
+        <visual name="border_s">
+          <pose>0 -2.5 0.001 0 0 0</pose>
+          <geometry><box><size>1.5 0.04 0.01</size></box></geometry>
+          <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
+        </visual>
+        <!-- 白色边框 - 东边 -->
+        <visual name="border_e">
+          <pose>0.75 0 0.001 0 0 0</pose>
+          <geometry><box><size>0.04 5.0 0.01</size></box></geometry>
+          <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
+        </visual>
+        <!-- 白色边框 - 西边 -->
+        <visual name="border_w">
+          <pose>-0.75 0 0.001 0 0 0</pose>
+          <geometry><box><size>0.04 5.0 0.01</size></box></geometry>
+          <material><ambient>1 1 1 1</ambient><diffuse>1 1 1 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 起飞平台 ==================== -->
+    <model name="takeoff_pad">
+      <static>true</static>
+      <pose>-2.25 0 0.006 0 0 0</pose>
+      <link name="link">
+        <visual name="takeoff_pad_visual">
+          <geometry><cylinder><radius>0.4</radius><length>0.01</length></cylinder></geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>1 1 1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 边界墙 (6x5m场地, 高3m 符合比赛规范) ==================== -->
+    <model name="south_wall">
+      <static>true</static>
+      <pose>0 -2.5 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="south_wall_collision">
+          <geometry><box><size>6.0 0.15 3.0</size></box></geometry>
+        </collision>
+        <visual name="south_wall_visual">
+          <geometry><box><size>6.0 0.15 3.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="north_wall">
+      <static>true</static>
+      <pose>0 2.5 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="north_wall_collision">
+          <geometry><box><size>6.0 0.15 3.0</size></box></geometry>
+        </collision>
+        <visual name="north_wall_visual">
+          <geometry><box><size>6.0 0.15 3.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="east_wall">
+      <static>true</static>
+      <pose>3.0 0 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="east_wall_collision">
+          <geometry><box><size>0.15 5.0 3.0</size></box></geometry>
+        </collision>
+        <visual name="east_wall_visual">
+          <geometry><box><size>0.15 5.0 3.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="west_wall">
+      <static>true</static>
+      <pose>-3.0 0 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="west_wall_collision">
+          <geometry><box><size>0.15 5.0 3.0</size></box></geometry>
+        </collision>
+        <visual name="west_wall_visual">
+          <geometry><box><size>0.15 5.0 3.0</size></box></geometry>
+          <material>
+            <ambient>0.5 0.5 0.5 1</ambient>
+            <diffuse>0.6 0.6 0.6 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 避障柱 x2 ==================== -->
+    <model name="pillar_1">
+      <static>true</static>
+      <pose>0.0 0.75 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="pillar_1_collision">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+        </collision>
+        <visual name="pillar_1_visual">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+          <material>
+            <ambient>0.85 0.15 0.1 1</ambient>
+            <diffuse>0.9 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="pillar_02">
+      <static>true</static>
+      <pose>0.0 -0.75 0.75 0 0 0</pose>
+      <link name="link">
+        <collision name="pillar_02_collision">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+        </collision>
+        <visual name="pillar_02_visual">
+          <geometry><box><size>0.5 0.5 1.5</size></box></geometry>
+          <material>
+            <ambient>0.85 0.15 0.1 1</ambient>
+            <diffuse>0.9 0.1 0.1 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== 穿越框 ==================== -->
+    <model name="aerial_gate">
+      <static>true</static>
+      <!--
+        空中框在全链路仿真中作为规则目标和视觉参照保留为可视模型。
+        UAV 尺寸、航点中心线和相机识别仍按规则验收；碰撞关闭，避免
+        Gazebo 中旋转桨叶/细门框接触产生非真实弹飞，影响完整任务验证。
+      -->
+      <!-- 左立柱 -->
+      <link name="gate_pillar_l">
+        <pose>1.5 0.5 1.0 0 0 0</pose>
+        <visual name="gate_pillar_l_visual">
+          <geometry><box><size>0.05 0.05 2.0</size></box></geometry>
+          <material>
+            <ambient>1 0.05 0.05 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 右立柱 -->
+      <link name="gate_pillar_r">
+        <pose>1.5 -0.5 1.0 0 0 0</pose>
+        <visual name="gate_pillar_r_visual">
+          <geometry><box><size>0.05 0.05 2.0</size></box></geometry>
+          <material>
+            <ambient>1 0.05 0.05 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 左底座 -->
+      <link name="gate_base_l">
+        <pose>1.5 0.5 0.025 0 0 0</pose>
+        <visual name="gate_base_l_visual">
+          <geometry><box><size>0.15 0.15 0.05</size></box></geometry>
+          <material>
+            <ambient>0.5 0.05 0.05 1</ambient>
+            <diffuse>0.6 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 右底座 -->
+      <link name="gate_base_r">
+        <pose>1.5 -0.5 0.025 0 0 0</pose>
+        <visual name="gate_base_r_visual">
+          <geometry><box><size>0.15 0.15 0.05</size></box></geometry>
+          <material>
+            <ambient>0.5 0.05 0.05 1</ambient>
+            <diffuse>0.6 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 顶部横梁 -->
+      <link name="gate_top_bar">
+        <pose>1.5 0 1.75 0 0 0</pose>
+        <visual name="gate_top_bar_visual">
+          <geometry><box><size>0.05 1.0 0.05</size></box></geometry>
+          <material>
+            <ambient>1 0.05 0.05 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+      <!-- 底部横梁 -->
+      <link name="gate_bottom_bar">
+        <pose>1.5 0 0.775 0 0 0</pose>
+        <visual name="gate_bottom_bar_visual">
+          <geometry><box><size>0.05 1.0 0.05</size></box></geometry>
+          <material>
+            <ambient>1 0.05 0.05 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== ArUco标靶 ==================== -->
+    <include>
+      <uri>model://aruco_marker</uri>
+      <pose>1.75 0.0 0.001 0 0 0</pose>
+    </include>
+
+    <!-- ==================== UGV行驶道 ==================== -->
+    <model name="ugv_lane_s">
+      <static>true</static>
+      <pose>0 -2.10 0.002 0 0 0</pose>
+      <link name="link">
+        <visual name="ugv_lane_s_visual">
+          <geometry><box><size>6.0 0.8 0.002</size></box></geometry>
+          <material>
+            <ambient>0.25 0.25 0.25 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ugv_lane_n">
+      <static>true</static>
+      <pose>0 2.10 0.002 0 0 0</pose>
+      <link name="link">
+        <visual name="ugv_lane_n_visual">
+          <geometry><box><size>6.0 0.8 0.002</size></box></geometry>
+          <material>
+            <ambient>0.25 0.25 0.25 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ugv_lane_e">
+      <static>true</static>
+      <pose>2.60 0.00 0.002 0 0 1.57</pose>
+      <link name="link">
+        <visual name="ugv_lane_e_visual">
+          <geometry><box><size>1.6 0.8 0.002</size></box></geometry>
+          <material>
+            <ambient>0.25 0.25 0.25 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="ugv_lane_w">
+      <static>true</static>
+      <pose>-2.60 0.00 0.002 0 0 1.57</pose>
+      <link name="link">
+        <visual name="ugv_lane_w_visual">
+          <geometry><box><size>1.6 0.8 0.002</size></box></geometry>
+          <material>
+            <ambient>0.25 0.25 0.25 1</ambient>
+            <diffuse>0.3 0.3 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ==================== UGV门洞 x3 ==================== -->
+    <!-- 物理模型 ugv_gate_1: 南侧车道; 当前视觉顺时针路线中作为第3个门洞 -->
+    <model name="ugv_gate_1">
+      <static>true</static>
+      <pose>-0.50 -2.00 0.45 0 0 0</pose>
+      <!-- 左柱 (黄黑相间6段) -->
+      <link name="ugv_gate_1_left">
+        <pose>0 0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_1_left_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g1_l_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_l_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_l_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_l_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_l_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_l_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <!-- 右柱 (黄黑相间6段) -->
+      <link name="ugv_gate_1_right">
+        <pose>0 -0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_1_right_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g1_r_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_r_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_r_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_r_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_r_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g1_r_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <!-- 顶梁 (黑色) -->
+      <link name="ugv_gate_1_top">
+        <pose>0 0 0.425 0 0 0</pose>
+        <collision name="ugv_gate_1_top_collision">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+        </collision>
+        <visual name="ugv_gate_1_top_visual">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 物理模型 ugv_gate_2: 东侧车道; 当前视觉顺时针路线中作为第2个门洞 -->
+    <model name="ugv_gate_2">
+      <static>true</static>
+      <pose>2.50 0.50 0.45 0 0 1.57</pose>
+      <link name="ugv_gate_2_left">
+        <pose>0 0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_2_left_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g2_l_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_l_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_l_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_l_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_l_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_l_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <link name="ugv_gate_2_right">
+        <pose>0 -0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_2_right_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g2_r_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_r_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_r_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_r_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_r_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g2_r_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <link name="ugv_gate_2_top">
+        <pose>0 0 0.425 0 0 0</pose>
+        <collision name="ugv_gate_2_top_collision">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+        </collision>
+        <visual name="ugv_gate_2_top_visual">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 物理模型 ugv_gate_3: 北侧车道; 当前视觉顺时针路线中作为第1个门洞 -->
+    <model name="ugv_gate_3">
+      <static>true</static>
+      <pose>-0.50 2.00 0.45 0 0 0</pose>
+      <link name="ugv_gate_3_left">
+        <pose>0 0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_3_left_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g3_l_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_l_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_l_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_l_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_l_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_l_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <link name="ugv_gate_3_right">
+        <pose>0 -0.35 0 0 0 0</pose>
+        <collision name="ugv_gate_3_right_collision">
+          <geometry><box><size>0.05 0.05 0.9</size></box></geometry>
+        </collision>
+        <visual name="ugv_g3_r_y1"><pose>0 0 0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_r_b1"><pose>0 0 0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_r_y2"><pose>0 0 0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_r_b2"><pose>0 0 -0.075 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_r_y3"><pose>0 0 -0.225 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>1 0.9 0 1</ambient><diffuse>1 0.85 0 1</diffuse></material></visual>
+        <visual name="ugv_g3_r_b3"><pose>0 0 -0.375 0 0 0</pose><geometry><box><size>0.055 0.055 0.15</size></box></geometry><material><ambient>0.05 0.05 0.05 1</ambient><diffuse>0 0 0 1</diffuse></material></visual>
+      </link>
+      <link name="ugv_gate_3_top">
+        <pose>0 0 0.425 0 0 0</pose>
+        <collision name="ugv_gate_3_top_collision">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+        </collision>
+        <visual name="ugv_gate_3_top_visual">
+          <geometry><box><size>0.05 0.7 0.05</size></box></geometry>
+          <material>
+            <ambient>0.05 0.05 0.05 1</ambient>
+            <diffuse>0 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- ================================================================== -->
+    <!-- UAV: PX4官方x500外观按0.67缩放, 电机轴对角约0.3297m              -->
+    <!-- 比赛包装层加装18cm/3mm刺针并接入ArduPilot SITL电机物理链路       -->
+    <!-- ================================================================== -->
+    <include>
+      <uri>model://competition_x500</uri>
+      <name>drone</name>
+      <pose>-2.25 0 0.24 0 0 0</pose>
+    </include>
+
+    <!-- ================================================================== -->
+    <!-- UGV: 规则尺寸简化模型, 外廓约 0.40m x 0.32m x 0.17m               -->
+    <!-- 规则约束: 长280-420mm, 宽220-380mm, 高150-260mm。                 -->
+    <!-- ================================================================== -->
+    <model name="ugv_rover">
+      <static>true</static>
+      <plugin filename="gz-sim-pose-publisher-system" name="gz::sim::systems::PosePublisher">
+        <publish_model_pose>true</publish_model_pose>
+        <publish_nested_model_pose>true</publish_nested_model_pose>
+        <publish_link_pose>false</publish_link_pose>
+        <publish_sensor_pose>false</publish_sensor_pose>
+        <publish_collision_pose>false</publish_collision_pose>
+        <publish_visual_pose>false</publish_visual_pose>
+        <static_publisher>false</static_publisher>
+        <use_pose_vector_msg>true</use_pose_vector_msg>
+        <update_frequency>30</update_frequency>
+      </plugin>
+      <!-- yaw=0: +X蓝色车头朝向北侧门洞/车道入口 -->
+      <pose>-2.25 1.8 0.02 0 0 0</pose>
+      <link name="base_link">
+        <visual name="chassis_visual">
+          <pose>0 0 0.090 0 0 0</pose>
+          <geometry><box><size>0.34 0.22 0.10</size></box></geometry>
+          <material>
+            <ambient>0.08 0.10 0.12 1</ambient>
+            <diffuse>0.12 0.16 0.20 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+          </material>
+        </visual>
+        <visual name="top_plate_visual">
+          <pose>0 0 0.150 0 0 0</pose>
+          <geometry><box><size>0.28 0.18 0.02</size></box></geometry>
+          <material>
+            <ambient>0.02 0.02 0.02 1</ambient>
+            <diffuse>0.03 0.03 0.03 1</diffuse>
+          </material>
+        </visual>
+        <visual name="front_bumper_visual">
+          <pose>0.185 0 0.095 0 0 0</pose>
+          <geometry><box><size>0.03 0.18 0.035</size></box></geometry>
+          <material>
+            <ambient>0.0 0.20 0.95 1</ambient>
+            <diffuse>0.0 0.30 1.0 1</diffuse>
+          </material>
+        </visual>
+        <visual name="front_camera_visual">
+          <pose>0.180 0 0.145 0 0 0</pose>
+          <geometry><box><size>0.035 0.050 0.030</size></box></geometry>
+          <material>
+            <ambient>0.0 0.05 0.15 1</ambient>
+            <diffuse>0.0 0.08 0.18 1</diffuse>
+          </material>
+        </visual>
+        <visual name="front_light_l">
+          <pose>0.202 0.060 0.115 0 0 0</pose>
+          <geometry><box><size>0.010 0.020 0.018</size></box></geometry>
+          <material>
+            <ambient>1 1 0.75 1</ambient>
+            <diffuse>1 1 0.85 1</diffuse>
+          </material>
+        </visual>
+        <visual name="front_light_r">
+          <pose>0.202 -0.060 0.115 0 0 0</pose>
+          <geometry><box><size>0.010 0.020 0.018</size></box></geometry>
+          <material>
+            <ambient>1 1 0.75 1</ambient>
+            <diffuse>1 1 0.85 1</diffuse>
+          </material>
+        </visual>
+        <visual name="top_forward_arrow_shaft">
+          <pose>0.035 0 0.168 0 0 0</pose>
+          <geometry><box><size>0.120 0.018 0.012</size></box></geometry>
+          <material>
+            <ambient>0.85 0.95 1 1</ambient>
+            <diffuse>0.9 1 1 1</diffuse>
+          </material>
+        </visual>
+        <visual name="top_forward_arrow_head">
+          <pose>0.105 0 0.168 0 0 0</pose>
+          <geometry><box><size>0.040 0.060 0.012</size></box></geometry>
+          <material>
+            <ambient>0.85 0.95 1 1</ambient>
+            <diffuse>0.9 1 1 1</diffuse>
+          </material>
+        </visual>
+        <visual name="rear_marker_visual">
+          <pose>-0.185 0 0.105 0 0 0</pose>
+          <geometry><box><size>0.020 0.120 0.025</size></box></geometry>
+          <material>
+            <ambient>0.8 0.0 0.0 1</ambient>
+            <diffuse>1.0 0.0 0.0 1</diffuse>
+          </material>
+        </visual>
+        <collision name="chassis_collision">
+          <pose>0 0 0.090 0 0 0</pose>
+          <geometry><box><size>0.34 0.22 0.10</size></box></geometry>
+        </collision>
+        <visual name="wheel_fl">
+          <pose>0.135 0.1425 0.055 1.5707963268 0 0</pose>
+          <geometry><cylinder><radius>0.055</radius><length>0.035</length></cylinder></geometry>
+          <material><ambient>0.01 0.01 0.01 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material>
+        </visual>
+        <visual name="wheel_fr">
+          <pose>0.135 -0.1425 0.055 1.5707963268 0 0</pose>
+          <geometry><cylinder><radius>0.055</radius><length>0.035</length></cylinder></geometry>
+          <material><ambient>0.01 0.01 0.01 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material>
+        </visual>
+        <visual name="wheel_rl">
+          <pose>-0.135 0.1425 0.055 1.5707963268 0 0</pose>
+          <geometry><cylinder><radius>0.055</radius><length>0.035</length></cylinder></geometry>
+          <material><ambient>0.01 0.01 0.01 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material>
+        </visual>
+        <visual name="wheel_rr">
+          <pose>-0.135 -0.1425 0.055 1.5707963268 0 0</pose>
+          <geometry><cylinder><radius>0.055</radius><length>0.035</length></cylinder></geometry>
+          <material><ambient>0.01 0.01 0.01 1</ambient><diffuse>0.02 0.02 0.02 1</diffuse></material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- 红气球: 直径 0.16m, 小于规则 0.30m 上限; 贴合UGV顶部作为视觉目标 -->
+    <model name="red_balloon">
+      <static>true</static>
+      <pose>-2.25 1.8 0.24 0 0 0</pose>
+      <link name="balloon_link">
+        <visual name="balloon_visual">
+          <geometry><sphere><radius>0.08</radius></sphere></geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0.05 0.05 1</diffuse>
+            <specular>0.3 0.3 0.3 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

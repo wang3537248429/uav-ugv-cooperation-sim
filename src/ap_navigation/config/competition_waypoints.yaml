@@ -1,0 +1,12 @@
+# Coordinates in the saved uav_map: X forward, Y left, Z up, metres.
+# The mapping session starts at the marked takeoff position, heading forward.
+frame_id: uav_map
+waypoints:
+  - {label: TAKEOFF, position: [0.0, 0.0, 1.0]}
+  - {label: APPROACH_FRAME, position: [2.9, 0.0, 1.0]}
+  - {label: SCAN_ZONE, position: [3.8, 0.0, 1.0]}
+  - {label: RETURN_TAKEOFF_ZONE, position: [0.5, 0.0, 1.0]}
+  - {label: UGV_STOP_APPROACH, position: [0.9, -1.85, 1.0]}
+  - {label: STRIKE_ZONE, position: [0.0, -1.85, 0.8]}
+  - {label: BALLOON_ALT, position: [0.0, -1.85, 0.45]}
+  - {label: LAND, position: [0.0, 0.0, 0.0]}

@@ -1,0 +1,44 @@
+diff --git a/libraries/AP_Baro/AP_Baro_SITL.cpp b/libraries/AP_Baro/AP_Baro_SITL.cpp
+index 9b41e33..df79ebf 100644
+--- a/libraries/AP_Baro/AP_Baro_SITL.cpp
++++ b/libraries/AP_Baro/AP_Baro_SITL.cpp
+@@ -17,6 +17,11 @@ AP_Baro_SITL::AP_Baro_SITL(AP_Baro &baro) :
+ {
+     if (_sitl != nullptr) {
+         _instance = _frontend.register_sensor();
++        // Provide initial sample so barometer calibration won't deadlock
++        // (timer processes don't run during SITL setup)
++        _recent_press = SSL_AIR_PRESSURE;
++        _recent_temp = 25.0f;
++        _has_sample = true;
+ #if APM_BUILD_TYPE(APM_BUILD_ArduSub)
+         _frontend.set_type(_instance, AP_Baro::BARO_TYPE_WATER);
+ #endif
+@@ -145,6 +150,11 @@ bool AP_Baro_SITL::healthy(uint8_t instance)
+ // Read the sensor
+ void AP_Baro_SITL::update(void)
+ {
++    // Provide data on-the-fly during initialization when timer hasn't run yet
+     if (!_has_sample) {
+-        return;
++        float sim_alt = _sitl->state.altitude;
++        float sigma, delta, theta;
++        AP_Baro::SimpleAtmosphere(sim_alt * 0.001f, sigma, delta, theta);
++        _recent_press = SSL_AIR_PRESSURE * delta;
++        _recent_temp = KELVIN_TO_C(SSL_AIR_TEMPERATURE * theta);
+     }
+diff --git a/libraries/AP_BoardConfig/AP_BoardConfig.cpp b/libraries/AP_BoardConfig/AP_BoardConfig.cpp
+index 1457d86..2551117 100644
+--- a/libraries/AP_BoardConfig/AP_BoardConfig.cpp
++++ b/libraries/AP_BoardConfig/AP_BoardConfig.cpp
+@@ -469,10 +469,4 @@ void AP_BoardConfig::throw_error(const char *err_type, const char *fmt, va_list
+             }
+ #endif
+         }
+-#if HAL_GCS_ENABLED
+-        gcs().update_receive();
+-        gcs().update_send();
+-#endif
+-        EXPECT_DELAY_MS(10);
+-        hal.scheduler->delay(5);
+     }

@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  clean-install:
+    name: Fresh Ubuntu / Install and run downloaded source
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      # .dockerignore excludes .git. No host ROS, pip packages, maps or build
+      # output enter the image; setup uses the public sources only.
+      - name: Install from a clean Ubuntu image
+        run: docker build --tag aeromind-sim:ci .
+      - name: Validate source, installed ROS nodes and launch
+        run: |
+          docker run --rm --entrypoint bash aeromind-sim:ci -c 'make check && make test-all && bash start.sh --headless --check'
+      - name: Complete mapping and localization missions with software rendering
+        run: |
+          docker run --name aeromind-smoke --init --shm-size=1g --entrypoint bash aeromind-sim:ci -c 'make smoke-mapping SMOKE_TIMEOUT=900'
+      - name: Collect simulation logs
+        if: always()
+        run: |
+          mkdir -p clean-install-logs
+          docker cp aeromind-smoke:/var/tmp/aeromind-sim/artifacts/. clean-install-logs/ || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: clean-install-logs
+          path: clean-install-logs
+          if-no-files-found: ignore
+
+  standalone:
+    name: Standalone / Python ${{ matrix.python }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - name: Install development dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+      - name: Check source and standalone tests
+        run: make check
+      - name: Check startup script syntax and help
+        run: |
+          bash -n start.sh
+          for script in tools/*.sh; do bash -n "$script"; done
+          ./start.sh --help
+
+  ros:
+    name: ROS 2 Humble / Build and test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install Python dependencies
+        run: python3 -m pip install -r requirements-dev.txt
+
+      - name: Install Gazebo Garden build dependencies
+        run: |
+          curl -fsSL https://packages.osrfoundation.org/gazebo.gpg | sudo tee /usr/share/keyrings/gazebo.gpg >/dev/null
+          echo 'deb [signed-by=/usr/share/keyrings/gazebo.gpg] https://packages.osrfoundation.org/gazebo/ubuntu-stable jammy main' | sudo tee /etc/apt/sources.list.d/gazebo-stable.list >/dev/null
+          sudo apt-get update
+          sudo apt-get install -y libgz-transport12-dev libgz-msgs9-dev ros-humble-ros-gzgarden
+
+      - name: Install ROS dependencies
+        # Garden packages are installed above; their Ubuntu keys are absent from rosdep.
+        run: rosdep install --from-paths src --ignore-src -r -y --skip-keys 'gz-transport12 gz-msgs9 ros_gz_bridge ros_gz_interfaces'
+
+      - name: Build
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          make build
+
+      - name: ROS regression tests
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          source tools/activate.sh
+          make test-ros

@@ -1,0 +1,113 @@
+diff --git a/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.cpp b/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.cpp
+--- a/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.cpp
++++ b/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.cpp
+@@ -62,8 +62,13 @@ void AP_OpticalFlow_MAV::update(void)
+         const float flow_scale_factor_y = 1.0f + 0.001f * _flowScaler().y;
+ 
+         // copy flow rates to state structure
+-        state.flowRate = { ((float)flow_sum.x / count) * flow_scale_factor_x * dt,
+-                           ((float)flow_sum.y / count) * flow_scale_factor_y * dt };
++        if (integrated_time_sum > 0.0f) {
++            state.flowRate = { (float)flow_sum.x / integrated_time_sum * flow_scale_factor_x,
++                               (float)flow_sum.y / integrated_time_sum * flow_scale_factor_y };
++        } else {
++            state.flowRate = { ((float)flow_sum.x / count) * flow_scale_factor_x * dt,
++                               ((float)flow_sum.y / count) * flow_scale_factor_y * dt };
++        }
+ 
+         // copy average body rate to state structure
+         state.bodyRate = { gyro_sum.x / gyro_sum_count, gyro_sum.y / gyro_sum_count };
+@@ -80,6 +85,7 @@ void AP_OpticalFlow_MAV::update(void)
+ 
+     // reset local buffers
+     flow_sum.zero();
++    integrated_time_sum = 0.0f;
+     quality_sum = 0;
+     count = 0;
+ 
+@@ -89,21 +95,34 @@ void AP_OpticalFlow_MAV::handle_msg(const mavlink_message_t &msg)
+ // handle OPTICAL_FLOW mavlink messages
+ void AP_OpticalFlow_MAV::handle_msg(const mavlink_message_t &msg)
+ {
+-    mavlink_optical_flow_t packet;
+-    mavlink_msg_optical_flow_decode(&msg, &packet);
++    if (msg.msgid == MAVLINK_MSG_ID_OPTICAL_FLOW_RAD) {
++        mavlink_optical_flow_rad_t packet;
++        mavlink_msg_optical_flow_rad_decode(&msg, &packet);
++        if (packet.integration_time_us == 0) {
++            return;
++        }
++        const float integration_time = packet.integration_time_us * 1.0e-6f;
++        flow_sum.x += packet.integrated_x;
++        flow_sum.y += packet.integrated_y;
++        integrated_time_sum += integration_time;
++        quality_sum += packet.quality;
++        count++;
++        sensor_id = packet.sensor_id;
++    } else {
++        mavlink_optical_flow_t packet;
++        mavlink_msg_optical_flow_decode(&msg, &packet);
++        const float flow_x = is_zero(packet.flow_rate_x) ? packet.flow_x : packet.flow_rate_x;
++        const float flow_y = is_zero(packet.flow_rate_y) ? packet.flow_y : packet.flow_rate_y;
++        flow_sum.x += flow_x;
++        flow_sum.y += flow_y;
++        quality_sum += packet.quality;
++        count++;
++        sensor_id = packet.sensor_id;
++    }
+ 
+     // record time message was received
+     // ToDo: add jitter correction
+     latest_frame_us = AP_HAL::micros64();
+-
+-    // add sensor values to sum
+-    flow_sum.x += packet.flow_x;
+-    flow_sum.y += packet.flow_y;
+-    quality_sum += packet.quality;
+-    count++;
+-
+-    // take sensor id from message
+-    sensor_id = packet.sensor_id;
+ }
+ 
+ #endif  // AP_OPTICALFLOW_MAV_ENABLED
+diff --git a/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.h b/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.h
+--- a/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.h
++++ b/libraries/AP_OpticalFlow/AP_OpticalFlow_MAV.h
+@@ -27,14 +27,15 @@
+ 
+ private:
+ 
+-    uint64_t prev_frame_us;             // system time of last message when update was last called
+-    uint64_t latest_frame_us;           // system time of most recent messages processed
+-    Vector2l flow_sum;                  // sum of sensor's flow_x and flow_y values since last call to update
+-    uint16_t quality_sum;               // sum of sensor's quality values since last call to update
+-    uint16_t count;                     // number of sensor readings since last call to update
+-    uint8_t sensor_id;                  // sensor_id received in latest mavlink message
+-    Vector2f gyro_sum;                  // sum of gyro sensor values since last frame from flow sensor
+-    uint16_t gyro_sum_count;            // number of gyro sensor values in sum
++    uint64_t prev_frame_us = 0;         // system time of last message when update was last called
++    uint64_t latest_frame_us = 0;       // system time of most recent messages processed
++    Vector2f flow_sum{};                // sum of sensor flow rates or integrated flow angles
++    float integrated_time_sum = 0.0f;   // seconds represented by OPTICAL_FLOW_RAD samples
++    uint16_t quality_sum = 0;           // sum of sensor's quality values since last call to update
++    uint16_t count = 0;                 // number of sensor readings since last call to update
++    uint8_t sensor_id = 0;              // sensor_id received in latest mavlink message
++    Vector2f gyro_sum{};                // sum of gyro sensor values since last frame from flow sensor
++    uint16_t gyro_sum_count = 0;        // number of gyro sensor values in sum
+ };
+ 
+ #endif  // AP_OPTICALFLOW_MAV_ENABLED
+diff --git a/libraries/GCS_MAVLink/GCS_Common.cpp b/libraries/GCS_MAVLink/GCS_Common.cpp
+--- a/libraries/GCS_MAVLink/GCS_Common.cpp
++++ b/libraries/GCS_MAVLink/GCS_Common.cpp
+@@ -4169,6 +4169,9 @@ void GCS_MAVLINK::handle_message(const mavlink_message_t &msg)
+     case MAVLINK_MSG_ID_OPTICAL_FLOW:
+         handle_optical_flow(msg);
+         break;
++    case MAVLINK_MSG_ID_OPTICAL_FLOW_RAD:
++        handle_optical_flow(msg);
++        break;
+ #endif
+ 
+     case MAVLINK_MSG_ID_DISTANCE_SENSOR:

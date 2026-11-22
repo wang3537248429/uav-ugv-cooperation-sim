@@ -1,0 +1,415 @@
+# ============================================================
+# 仿真环境参数 — 空地协同比赛
+# ============================================================
+# ros2 launch ap_simulation sim_all.launch.py
+
+# ---------- gz_pose_bridge (Gazebo真值位姿 -> 仿真传感器) ----------
+gz_pose_bridge:
+  ros__parameters:
+    gz_topic: "/world/competition_arena/dynamic_pose/info"
+    model_name: "drone"
+    publish_topic: "/sim/drone_pose_ned"
+    frame_id: "local_ned"
+    publish_rate: 200.0
+    use_initial_origin: true
+
+# ---------- sim_truth_external_nav (仿真真值 -> ExternalNav) ----------
+sim_truth_external_nav:
+  ros__parameters:
+    truth_topic: "/sim/drone_pose_ned"
+    input_mode: "truth"
+    odometry_topic: "/odometry/optical_flow"
+    vision_pose_topic: "/ap/external_nav/vision_pose"
+    ready_topic: "/ap/external_nav/ready"
+    covariance_topic: "/ap/external_nav/covariance"
+    publish_rate: 30.0
+    truth_stale_timeout: 0.5
+    cov_pos_xy: 0.02
+    cov_pos_z: 0.04
+    cov_ang_yaw: 0.03
+    cov_ang_rp: 100.0
+    roll_pitch_source: "flat"
+    yaw_source: "truth"
+
+# ---------- optical_flow_odometry (真实光流/测距 -> 3D NED里程计) ----------
+optical_flow_odometry:
+  ros__parameters:
+    flow_topic: "/optical_flow/velocity"
+    quality_topic: "/optical_flow/quality"
+    range_topic: "/range/down"
+    attitude_topic: "/sim/truth_attitude"
+    odom_topic: "/odometry/optical_flow"
+    path_topic: "/odometry/optical_flow_path"
+    frame_id: "local_ned"
+    child_frame_id: "base_link"
+    min_quality: 80
+    max_dt: 0.20
+    max_speed: 3.0
+    velocity_alpha: 0.35
+    path_length: 500
+    sensor_stale_timeout: 0.50
+    attitude_stale_timeout: 0.50
+
+# ---------- sim_optical_flow_sensor (Gazebo真值 -> 联调传感器契约) ----------
+sim_optical_flow_sensor:
+  ros__parameters:
+    truth_topic: "/sim/drone_pose_ned"
+    truth_attitude_topic: "/sim/truth_attitude"
+    flow_topic: "/optical_flow/velocity"
+    quality_topic: "/optical_flow/quality"
+    range_topic: "/range/down"
+    publish_rate: 30.0
+    initial_height_m: 0.24
+    minimum_range_m: 0.05
+    maximum_range_m: 8.0
+    quality: 255
+    max_dt: 0.20
+    max_speed_mps: 3.0
+
+# ---------- sitl_json_state_bridge (Gazebo真值 -> ArduPilot JSON SITL) ----------
+sitl_json_state_bridge:
+  ros__parameters:
+    bind_ip: "127.0.0.1"
+    bind_port: 9002
+    pose_topic: "/sim/drone_pose_ned"
+    imu_topic: "/world/competition_arena/model/drone/link/base_link/sensor/imu_sensor/imu"
+    # 默认走 Gazebo 电机物理链路。位置/姿态仍来自 Gazebo truth pose,
+    # gyro/accel 使用 Gazebo 原生 IMU, 避免 pose 差分噪声和延迟在
+    # ArduPilot 姿态闭环里被放大。
+    use_gazebo_imu: true
+    use_gazebo_gyro: true
+    use_gazebo_accel: true
+    imu_stale_timeout: 0.2
+    pose_stale_timeout: 0.5
+    max_dt: 0.05
+    no_time_sync: false
+    velocity_lpf_alpha: 0.45
+    accel_lpf_alpha: 0.35
+    max_velocity_mps: 5.0
+    max_accel_mps2: 18.0
+    max_gyro_rps: 8.0
+    # JSON SITL receives both Euler and quaternion if this is true, and
+    # ArduPilot gives quaternion priority. The Gazebo physical chain uses the
+    # quaternion path to avoid Euler wrap/axis ambiguity during position hold.
+    # Real hardware does not use this JSON bridge.
+    send_quaternion: true
+
+# ---------- sim_camera_node (OpenCV合成相机) ----------
+sim_camera_node:
+  ros__parameters:
+    width: 640
+    height: 480
+    framerate: 15.0
+    frame_id: "camera_down"
+    balloon_x: 0.00
+    balloon_y: 1.85
+    aruco_visible: true
+    aruco_id: 0
+    randomize_marker_on_start: true
+    aruco_dictionary: "DICT_4X4_50"
+    aruco_size: 0.15
+    pose_topic: "/sim/drone_pose_ned"
+    track_ugv_balloon: true
+    ugv_progress_topic: "/mission/ugv_progress"
+    balloon_punctured_topic: "/mission/balloon_punctured"
+
+# ---------- sim_ugv_node (左侧出发 + 穿三门洞 + 最后门洞后停车) ----------
+sim_ugv_node:
+  ros__parameters:
+    # Keep the simulated UGV ahead of the UAV's strike-window wait while
+    # retaining the collision-checked route geometry.
+    ugv_speed: 0.4
+    start_delay: 0.0
+    start_topic: "/mission/ugv_start"
+
+# ---------- gz_entity_sync (UGV/气球Gazebo可视化同步) ----------
+gz_entity_sync:
+  ros__parameters:
+    world_name: "competition_arena"
+    ugv_model: "ugv_rover"
+    balloon_model: "red_balloon"
+    sync_rate: 30.0
+
+# ---------- code_detect_node (ArUco码识别) ----------
+code_detect_node:
+  ros__parameters:
+    image_topic: "/camera/down/image_raw"
+    enable_publish: true
+    aruco_dictionary: "DICT_4X4_50"
+    target_id: 0
+    accept_any_id: true
+
+# ---------- ap_mavlink_bridge (TCP→SITL 飞控) ----------
+ap_mavlink_bridge:
+  ros__parameters:
+    connection_url: "tcp:127.0.0.1:5760"
+    # Optional local ground-station fan-out. Mission Planner/QGC can connect
+    # to UDP 14550 when this is set to udpout:127.0.0.1:14550. Leave empty for
+    # the default ROS-only control path.
+    gcs_output_url: ""
+    gcs_forward_commands: true
+    allow_hardware_connection: false
+    localization_backend: "external_nav"
+    source_system: 255
+    source_component: 191
+    mavlink_read_period: 0.01
+    raw_controller_hz: 50
+    force_disarm: true
+    # ExternalNav 已直接提供 LOCAL_POSITION_NED。无 GPS 的 SITL 不需要
+    # 反复设置全球原点或请求 HOME_POSITION；关闭后也不会产生 cmd=410
+    # (MAV_CMD_GET_HOME_POSITION unsupported) 的无效告警。
+    set_ekf_origin_on_start: false
+    force_vision_flat_attitude: true
+    vision_pose_cov_ang_rp: 100.0
+    vision_pose_cov_pos_z: 0.04
+    vision_pose_cov_vel: 0.1
+    send_vision_speed_estimate: true
+    vision_speed_max_mps: 0.8
+    vision_speed_jump_mps: 2.0
+    vision_speed_min_dt: 0.02
+    vision_speed_max_dt: 0.5
+    # Gazebo truth 已平滑；过重低通会让EKF低估真实速度并延迟制动。
+    vision_speed_lpf_alpha: 0.75
+    # Native FCU optical-flow EKF input is opt-in for hardware integration.
+    enable_native_optical_flow: false
+    optical_flow_input_topic: "/optical_flow/velocity"
+    optical_flow_quality_topic: "/optical_flow/quality"
+    distance_sensor_topic: "/range/down"
+    optical_flow_min_quality: 80
+    optical_flow_min_height: 0.05
+    optical_flow_max_height: 5.0
+    optical_flow_min_dt: 0.005
+    optical_flow_max_dt: 0.20
+    optical_flow_max_rate_rad_s: 8.0
+    optical_flow_sensor_id: 0
+    distance_sensor_id: 0
+    distance_sensor_min_m: 0.05
+    distance_sensor_max_m: 8.0
+    distance_sensor_orientation: 25
+    optical_flow_x_sign: 1.0
+    optical_flow_y_sign: 1.0
+    optical_flow_sensor_yaw_rad: 0.0
+    external_nav_diagnostics: true
+    external_nav_diagnostics_period: 2.0
+    guided_attitude_climb_full_scale: 10.0
+    guided_attitude_hover_thrust: 0.455
+    guided_attitude_thrust_min: 0.30
+    guided_attitude_thrust_max: 0.47
+    guided_yaw_lock_enabled: true
+    guided_yaw_lock_rad: 0.0
+    # 8=SET_ATTITUDE_TARGET thrust字段按直接推力解释。
+    # 不启用16/32, 否则ArduPilot会关闭GUIDED XY位置/速度稳定,
+    # 起飞交权和悬停会横向刹不住。
+    ap_guid_options: 8
+    ap_angle_max_cd: 1000.0
+    ap_psc_angle_max_deg: 10.0
+    ap_loit_speed_cms: 10.0
+    ap_loit_acc_max_cmss: 5.0
+    ap_wpnav_speed_cms: 10.0
+    ap_wpnav_speed_up_cms: 30.0
+    ap_wpnav_speed_dn_cms: 35.0
+    ap_wpnav_accel_cmss: 5.0
+    ap_wpnav_accel_z_cmss: 45.0
+    # 固定位置航点由 ArduPilot 以 10cm/s、5cm/s² 生成连续轨迹。较低
+    # 位置增益提前减速；速度环提供足够阻尼，避免低于1°的小倾角持续
+    # 积分后形成几十秒周期的往返摆动。
+    ap_psc_posxy_p: 0.15
+    ap_psc_velxy_p: 1.20
+    ap_psc_velxy_i: 0.10
+    ap_psc_velxy_d: 0.05
+    # Gazebo pose bridge already publishes ArduPilot local NED
+    # y=-(world_y-origin_y). GUIDED targets use the same NED contract.
+    invert_guided_position_y: false
+    invert_guided_velocity_y: false
+
+# ---------- motor_actuator_bridge (SITL电机输出 -> Gazebo物理电机) ----------
+motor_actuator_bridge:
+  ros__parameters:
+    motor_topic: "/drone/command/motor_speed"
+    pwm_min: 1100.0
+    pwm_max: 1900.0
+    max_rot_velocity: 1000.0
+    # PX4 x500 rotor0..3 与 ArduPilot Quad-X MotorDef 数组下标一致：
+    # [前右CCW, 后左CCW, 前左CW, 后右CW]。MotorDef 的末列只是电机测试顺序，
+    # 不是 SERVO/PWM 顺序，不能按该列重排。
+    motor_order: [0, 1, 2, 3]
+    pwm_mapping: "final_pwm_linear"      # SERVO_OUTPUT_RAW 已是最终ESC PWM, 不再二次套MOT曲线
+    velocity_slew_rate_up: 8000.0
+    velocity_slew_rate_down: 12000.0
+    publish_rate: 100.0
+    spin_min: 0.15
+    spin_max: 0.95
+    thrust_expo: 0.65
+    stale_timeout: 0.25
+    require_armed: true
+
+# ---------- uav_mission_state_machine (任务状态机) ----------
+uav_mission_state_machine:
+  ros__parameters:
+    min_battery_voltage: 0.0              # 仿真跳过电池检查
+    connection_timeout: 60.0
+    max_mission_time: 1800.0
+    waypoint_timeout: 600.0
+    allow_waypoint_timeout_skip: false
+    ugv_wait_timeout: 120.0
+    require_code_success: true
+    require_ugv_ready_for_strike: true
+    allow_strike_without_ugv: false
+    code_failure_action: "LANDING"
+    localization_backend: "external_nav"
+    arming_timeout: 30.0
+    hover_pwm: 1500
+    takeoff_ramp_time: 10.0
+    target_altitude: 1.00
+    hover_target_altitude: 0.65
+    takeoff_min_pwm_offset: -170
+    takeoff_max_pwm_offset: -150
+    takeoff_success_altitude: 0.22
+    takeoff_settle_pwm: 1480
+    takeoff_settle_time: 0.0
+    # ArduPilot SITL's constrained-STABILIZE fallback retains upward momentum
+    # after liftoff. 1400 stops the climb without tripping the 1.10 m guard.
+    takeoff_fallback_brake_pwm: 1440
+    takeoff_fallback_ramp_start_pwm: 1490
+    takeoff_fallback_ramp_step_pwm: 2
+    takeoff_fallback_ramp_step_time: 0.8
+    takeoff_fallback_ramp_max_pwm: 1502
+    takeoff_fallback_liftoff_altitude: 0.20
+    takeoff_fallback_brake_climb_rate: 0.22
+    takeoff_fallback_abort_climb_rate: 0.45
+    takeoff_fallback_emergency_climb_rate: 2.50
+    takeoff_fallback_emergency_climb_time: 0.80
+    takeoff_fallback_max_altitude: 1.10
+    takeoff_fallback_timeout: 24.0
+    # JSON SITL accepts the bounded RC throttle during STABILIZE; ALT_HOLD
+    # keeps the vehicle disarmed at the motor-output layer in this model.
+    takeoff_fallback_mode: "STABILIZE"
+    takeoff_fallback_handoff_vertical_rate_max: 0.25
+    takeoff_fallback_handoff_stable_time: 0.4
+    takeoff_guided_handoff_time: 0.8
+    takeoff_guided_handoff_climb_rate: 0.03
+    # The low-altitude handoff must match the stable hover reached by the
+    # fallback throttle on the stock Gazebo/ArduPilot model.
+    takeoff_guided_handoff_min_altitude: 0.35
+    takeoff_guided_handoff_max_rp_deg: 18.0
+    takeoff_guided_handoff_max_local_xy_error: 1.20
+    takeoff_guided_handoff_max_local_z_error: 0.50
+    enable_local_position_z_consistency: false
+    takeoff_hold_fixed_origin: true
+    # ArduPilot 在地面由 GUIDED 位置子模式切换到姿态子模式时可能触发
+    # flow_of_control 内部错误。仿真使用受限 STABILIZE 真实电机离地，
+    # 达到低空交权条件后立即切回 GUIDED；不会直接改写 Gazebo 位姿。
+    use_guided_attitude_takeoff_fallback: false
+    takeoff_guided_fallback_climb_rate: 0.08
+    takeoff_guided_fallback_timeout: 18.0
+    allow_takeoff_rc_fallback: true
+    prefer_takeoff_rc_fallback: true
+    localization_mode: true               # 仿真主线使用GUIDED航点导航
+    hover_stable_time: 0.8
+    hover_stable_timeout: 120.0
+    hover_climb_rate: 0.05
+    hover_alt_tolerance: 0.22
+    hover_xy_tolerance: 1.20
+    hover_speed_xy_max: 0.16
+    hover_vertical_rate_max: 0.30
+    hover_guided_velocity_hold: false
+    hover_hold_speed_xy_max: 0.08
+    hover_hold_z_speed_max: 0.04
+    hover_hold_descent_speed_max: 0.120
+    skip_hover_stable_after_takeoff: false
+    takeoff_localization_grace_time: 15.0
+    hover_local_position_max_xy_error: 0.80
+    airborne_min_altitude: 0.08
+    airborne_min_altitude_grace: 4.0
+    airborne_max_rp_deg: 55.0
+    airborne_attitude_grace: 0.5
+    k_pos_p: 1.2
+    k_yaw_p: 1.5
+    max_pitch_pwm: 200
+    max_roll_pwm: 160
+    guided_mode_timeout: 8.0
+    guided_target_period: 0.2
+    guided_step_distance: 0.25
+    guided_path_lookahead: 0.20
+    guided_path_recovery_lookahead: 0.15
+    # 0.30m以内持续发布同一个固定终点，避免正常小偏差触发移动目标；
+    # 只有明显偏离走廊时才使用近端恢复点。
+    guided_path_cross_track_warn: 0.30
+    guided_nav_control_mode: "position"
+    guided_3d_enabled: true
+    guided_position_strategy: "direct"
+    guided_nav_speed_max: 0.06
+    guided_nav_z_speed_max: 0.04
+    guided_nav_k_xy: 0.18
+    guided_nav_k_z: 0.08
+    guided_nav_min_along_speed: 0.02
+    guided_hold_speed_max: 0.025
+    guided_velocity_slew_xy: 0.08
+    guided_velocity_slew_z: 0.12
+    guided_alt_recovery_z_speed_max: 0.10
+    guided_nav_cross_track_k: 0.18
+    guided_nav_cross_track_d: 0.35
+    guided_nav_cross_track_speed_max: 0.05
+    guided_nav_cross_track_stop: 0.40
+    guided_nav_attitude_brake_rp_deg: 14.0
+    guided_velocity_brake_speed_xy: 0.22
+    guided_velocity_resume_speed_xy: 0.09
+    guided_velocity_brake_damping: 0.60
+    guided_velocity_brake_cmd_max: 0.14
+    external_nav_velocity_lpf_alpha: 0.75
+    # ArduPilot 已负责位置轨迹的制动；任务层只在异常高速时冻结目标，
+    # 不在正常 0.1~0.2m/s 区间反复切换当前位置/终点。
+    guided_position_brake_speed_xy: 0.35
+    guided_position_brake_resume_speed_xy: 0.20
+    waypoint_reached_speed_xy_max: 0.12
+    waypoint_arrival_settle_time: 0.4
+    code_success_hold_time: 2.5
+    code_success_settle_speed: 0.07
+    hover_max_rp_deg: 18.0
+    # 真实物理验收中, Gazebo truth 作为 ExternalNav 观测输入。
+    # FCU local 仍记录用于观察, 但不作为任务硬中止条件, 避免仿真初期
+    # EKF/local 与 Gazebo truth 短暂不同步时误中止任务。
+    enable_local_position_consistency: false
+    local_position_max_xy_error: 1.8
+    local_position_stale_timeout: 2.0
+    # Point-cloud ICP can briefly miss one Mid-360 frame under GUI rendering;
+    # keep this bounded timeout aligned with navigation.yaml stale_timeout.
+    external_nav_stale_timeout: 1.0
+    localization_fault_hold_time: 2.5
+    localization_failure_action: "SAFE_STOP"
+    # 保持GUIDED位置闭环下降，避免切ALT_HOLD后携带横向速度漂离起飞区。
+    landing_strategy: "GUIDED_DESCEND"
+    landing_descent_pwm: 1450
+    landing_disarm_delay: 18.0
+    landing_guided_descent_rate: 0.12
+    landing_xy_speed_max: 0.08
+    landing_xy_damping: 0.55
+    landing_ground_altitude: 0.18
+    simulate_balloon_puncture_on_detection: true
+    post_puncture_return_home: true
+    post_puncture_return_altitude: 1.00
+    post_puncture_return_timeout: 240.0
+    post_puncture_return_step_distance: 0.20
+    post_puncture_return_speed_min: 0.12
+    # 起飞点距西墙较近；返航进入1.8m终端区即限速并加入速度阻尼，
+    # 防止斜向返航的横向余速越过x=0后逼近墙面。
+    post_puncture_home_brake_radius: 1.80
+    post_puncture_home_brake_damping: 0.80
+    post_puncture_home_radius: 0.18
+    post_puncture_home_speed_max: 0.06
+    post_puncture_home_settle_time: 1.0
+    post_puncture_climb_tolerance: 0.15
+    post_puncture_climb_settle_time: 1.0
+    safe_stop_mode: "ALT_HOLD"
+    safe_stop_descent_pwm: 1450
+    safe_stop_disarm_delay: 3.0
+    complete_requires_disarmed: true
+    enable_sim_truth_monitor: true
+    sim_truth_max_external_nav_xy_error: 2.0
+    sim_truth_stale_timeout: 2.0
+    # 机体中心安全边界，给0.33m级四轴及墙体保留余量。
+    sim_geofence_x_min: -0.35
+    sim_geofence_x_max: 4.85
+    sim_geofence_y_min: -2.15
+    sim_geofence_y_max: 2.15
+    sim_geofence_alt_max: 2.6

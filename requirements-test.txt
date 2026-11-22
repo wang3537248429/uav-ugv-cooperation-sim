@@ -1,0 +1,3 @@
+# Standalone tests: ROS, Gazebo and ArduPilot are not required.
+-r requirements.txt
+pytest>=6,<9

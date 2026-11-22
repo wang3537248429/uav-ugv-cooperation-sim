@@ -1,0 +1,66 @@
+# ROS / colcon
+build/
+install/
+log/
+
+# Runtime output
+.artifacts/
+terrain/
+*.local.yaml
+*.local.yml
+*.bin
+*.log
+*.bag
+*.db3
+*.mcap
+*.tlog
+*.ulg
+*.npz
+*.pcd
+*.ply
+*.jpg
+*.jpeg
+*.mp4
+*.avi
+*.zip
+*.tar
+*.gz
+
+# Local credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Editors
+.vscode/
+.idea/
+# Local assistant and agent state
+.claude/
+.codex/
+.agents/
+private/
+hardware/
+*~
+*.swp
+
+# OS files
+.DS_Store
+Thumbs.db

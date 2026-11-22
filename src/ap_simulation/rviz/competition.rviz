@@ -1,0 +1,182 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+  - Class: rviz_common/Views
+    Name: Views
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Image
+      Name: Downward Camera
+      Enabled: true
+      Transport Hint: raw
+      Normalize Range: true
+      Min Value: 0
+      Max Value: 1
+      Median window: 5
+      Topic:
+        Depth: 1
+        Durability Policy: Volatile
+        Reliability Policy: Best Effort
+        History Policy: Keep Last
+        Value: /camera/down/image_raw
+      Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Saved or Building 3D Map
+      Enabled: true
+      Alpha: 1
+      Color Transformer: AxisColor
+      Position Transformer: XYZ
+      Axis: Z
+      Style: Points
+      Size (Pixels): 2
+      Size (m): 0.025
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Value: /navigation/map
+      Value: true
+    - Class: rviz_default_plugins/PointCloud2
+      Name: Registered LiDAR Scan
+      Enabled: true
+      Alpha: 0.8
+      Color Transformer: FlatColor
+      Color: 255; 210; 70
+      Position Transformer: XYZ
+      Style: Points
+      Size (Pixels): 2
+      Topic:
+        Depth: 2
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Value: /navigation/cloud_registered
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Name: Point Cloud Localization Path
+      Enabled: true
+      Color: 70; 230; 180
+      Line Style: Lines
+      Line Width: 0.03
+      Topic:
+        Depth: 2
+        Durability Policy: Volatile
+        Reliability Policy: Reliable
+        History Policy: Keep Last
+        Value: /navigation/path
+      Value: true
+    - Alpha: 0.5
+      Cell Size: 0.5
+      Class: rviz_default_plugins/Grid
+      Color: 160; 160; 164
+      Enabled: true
+      Line Style:
+        Line Width: 0.03
+        Value: Lines
+      Name: Grid
+      Plane: XY
+      Plane Cell Count: 20
+      Reference Frame: <Fixed Frame>
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Competition Field
+      Topic:
+        Depth: 1
+        Durability Policy: Transient Local
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /sim/competition_field_markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Mission Waypoints
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /mission/waypoints
+      Value: true
+    - Class: rviz_default_plugins/Path
+      Enabled: true
+      Name: Optical Flow 3D Path
+      Topic:
+        Depth: 2
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odometry/optical_flow_path
+      Value: true
+    - Alpha: 1
+      Axes Length: 0.3
+      Axes Radius: 0.02
+      Class: rviz_default_plugins/Odometry
+      Enabled: true
+      Keep: 10
+      Name: Optical Flow 3D Odometry
+      Shape:
+        Alpha: 1
+        Axes Length: 0.3
+        Axes Radius: 0.02
+        Color: 255; 90; 40
+        Head Length: 0.08
+        Head Radius: 0.04
+        Shaft Length: 0.18
+        Shaft Radius: 0.02
+        Value: Arrow
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /odometry/optical_flow
+      Value: true
+    - Alpha: 1
+      Axes Length: 0.3
+      Axes Radius: 0.02
+      Class: rviz_default_plugins/PoseWithCovariance
+      Color: 0; 255; 0
+      Enabled: true
+      Name: UAV ExternalNav
+      Shape: Arrow (Flat)
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /ap/external_nav/vision_pose
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 36; 36; 40
+    Fixed Frame: uav_map
+    Frame Rate: 20
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+    - Class: rviz_default_plugins/FocusCamera
+    - Class: rviz_default_plugins/Measure
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 10
+      Focal Point:
+        X: 2.2
+        Y: 0
+        Z: 0.7
+      Name: Competition 3D View
+      Pitch: 0.75
+      Target Frame: <Fixed Frame>
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 0.8
+Window Geometry:
+  Height: 800
+  Width: 1200
