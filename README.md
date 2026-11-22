@@ -23,13 +23,13 @@ AeroMind Sim 是一套基于 ROS 2、Gazebo Sim 和 ArduPilot SITL 的空地协�
 ## 快速开始
 
 ```bash
-git clone REPOSITORY_URL aeromind-sim
+git clone https://github.com/wang3537248429/aeromind-sim.git
 cd aeromind-sim
 bash tools/setup_ubuntu_22_04.sh
 ./start.sh --check
 ```
 
-把 `REPOSITORY_URL` 替换成仓库地址。安装脚本需要联网和 `sudo`，会安装系统依赖、准备外部私有目录、编译固定提交的 ArduPilot SITL 和 ROS 工作空间，并运行依赖自检。已有 `make` 时，`make setup` 是同一个安装入口。请先退出 Conda / Python 虚拟环境。已有依赖时也可以直接执行 `make build`。
+安装脚本需要联网和 `sudo`，会安装系统依赖、准备外部私有目录、编译固定提交的 ArduPilot SITL 和 ROS 工作空间，并运行依赖自检。已有 `make` 时，`make setup` 是同一个安装入口。请先退出 Conda / Python 虚拟环境。已有依赖时也可以直接执行 `make build`。
 
 也可以下载源码 ZIP，解压后在源码根目录执行上述安装脚本。不需要作者的地图、缓存、依赖目录或本机配置。若解压工具没有保留执行权限，使用 `bash start.sh` 代替 `./start.sh`。
 
